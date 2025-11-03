@@ -8,5 +8,8 @@ import lombok.ToString;
 @Setter
 @ToString
 public class QueryResponse {
-    String answer;
+    String response;
+    boolean needsConfirmation;
+    String conversationId;
+    String error;
 }
