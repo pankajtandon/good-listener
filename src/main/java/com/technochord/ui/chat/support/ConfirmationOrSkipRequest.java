@@ -13,4 +13,5 @@ public class ConfirmationOrSkipRequest {
     private String conversationId;
     private boolean approved;
     private String feedback;
+    private String modelName;
 }

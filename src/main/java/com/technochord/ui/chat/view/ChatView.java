@@ -2,11 +2,11 @@ package com.technochord.ui.chat.view;
 
 import com.technochord.ui.chat.service.QueryService;
 import com.technochord.ui.chat.support.QueryResponse;
-import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.markdown.Markdown;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -14,24 +14,101 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
 @Route("")
 public class ChatView extends VerticalLayout {
     private final String CONVERSATION_ID = "CONVERSATION_ID";
     private TextArea inputArea;
-    private TextArea responseArea;
+    private Markdown responseArea;
+    private TextArea toolListArea;
     private TextArea confirmArea;
     private Button submitButton;
     private Button confirmButton;
     private Button skipButton;
-    private ComboBox<Integer> comboBox;
-    private Html topKLabel;
-
+    private VerticalLayout inputLayout;
+    private VerticalLayout confirmationLayout;
     private QueryService queryService;
 
     public ChatView(final QueryService queryService) {
         this.queryService = queryService;
-        //topKLabel = new Html();
-        comboBox = new ComboBox<>("Select a number that limits the number of tools \n that are semantically similar to your query \n and presented to the LLM: ");
+        ComboBox<Integer> toolLimitComboBox = buildToolLimitComboBox();
+        ComboBox<String> modelNameComboBox = buildModelNameComboBox();
+
+        // Page title
+        H1 title = new H1("Good Listener");
+
+        inputLayout = new VerticalLayout();
+        inputLayout.getStyle()
+                .set("border", "2px solid #2196F3")
+                .set("border-radius", "8px");
+
+        // Input text area
+        inputArea = new TextArea();
+        inputArea.setPlaceholder("Enter your question here...");
+        inputArea.setWidth("100%");
+        inputArea.setHeight("150px");
+
+
+        // Submit button
+        submitButton = new Button("Submit");
+        submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        submitButton.addClickListener(e -> handleSubmit(toolLimitComboBox, modelNameComboBox));
+        HorizontalLayout topKSubmitLayout = new HorizontalLayout(toolLimitComboBox, modelNameComboBox, submitButton);
+
+        inputLayout.add(inputArea, topKSubmitLayout);
+        inputLayout.setWidth("80%");
+
+        confirmationLayout = new VerticalLayout();
+        confirmationLayout.getStyle()
+                .set("border", "2px solid #2196F3")
+                .set("border-radius", "8px");
+        // Confirm button
+        confirmButton = new Button("Confirm");
+        confirmButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        confirmButton.addClickListener(e -> handleConfirmOrSkip(true, modelNameComboBox));
+
+        skipButton = new Button("Skip");
+        skipButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        skipButton.addClickListener(e -> handleConfirmOrSkip(false, modelNameComboBox));
+
+        // ToolList text area
+        toolListArea = new TextArea("Tools that are going to be processed:");
+        toolListArea.setPlaceholder("Tools that are going to be processed will appear here...");
+        toolListArea.setWidth("100%");
+        toolListArea.setHeight("200px");
+        toolListArea.setReadOnly(true);
+
+        // Confirmation text area
+        confirmArea = new TextArea("Tool Confirmation");
+        confirmArea.setPlaceholder("Tool confirmations will appear here...");
+        confirmArea.setWidth("100%");
+        confirmArea.setHeight("200px");
+        confirmArea.setReadOnly(true);
+        HorizontalLayout confirmOrSkipLayout = new HorizontalLayout(confirmButton, skipButton);
+        confirmationLayout.add(toolListArea, confirmArea, confirmOrSkipLayout);
+        confirmationLayout.setWidth("80%");
+
+        // Response text area
+        responseArea = new Markdown("Response");
+        //responseArea.setPlaceholder("Response will appear here...");
+        responseArea.setHeight("100%");
+        responseArea.getStyle()
+                .set("border", "2px solid #2196F3")
+                .set("border-radius", "8px");
+        responseArea.setWidth("80%");
+
+        // Layout configuration
+        add(title, inputLayout, confirmationLayout, responseArea);
+        setSpacing(true);
+        setPadding(true);
+        setAlignItems(Alignment.CENTER);
+        setDefaultHorizontalComponentAlignment(Alignment.CENTER);
+    }
+
+    private ComboBox buildToolLimitComboBox() {
+        ComboBox<Integer> comboBox = new ComboBox<>("Tool Limit: ");
         comboBox.setItems(1, 2, 3, 4, 5, 6, 7, 8, 9);
         comboBox.setAllowCustomValue(true);
         comboBox.setValue(100);
@@ -50,56 +127,28 @@ public class ChatView extends VerticalLayout {
                         Notification.Position.MIDDLE);
             }
         });
-
-        // Page title
-        H1 title = new H1("Good Listener");
-
-        // Input text area
-        inputArea = new TextArea("Query");
-        inputArea.setPlaceholder("Enter your question here...");
-        inputArea.setWidth("600px");
-        inputArea.setHeight("150px");
-
-
-        // Submit button
-        submitButton = new Button("Submit");
-        submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        submitButton.addClickListener(e -> handleSubmit());
-        HorizontalLayout topKSubmitLayout = new HorizontalLayout(comboBox, submitButton);
-
-        // Confirm button
-        confirmButton = new Button("Confirm");
-        confirmButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        confirmButton.addClickListener(e -> handleConfirmOrSkip(true));
-
-        skipButton = new Button("Skip");
-        skipButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        skipButton.addClickListener(e -> handleConfirmOrSkip(false));
-
-        // Confirmation text area
-        confirmArea = new TextArea("Tool Use Confirmation");
-        confirmArea.setPlaceholder("Tool confirmations will appear here...");
-        confirmArea.setWidth("600px");
-        confirmArea.setHeight("200px");
-        confirmArea.setReadOnly(true);
-
-        // Response text area
-        responseArea = new TextArea("Response");
-        responseArea.setPlaceholder("Response will appear here...");
-        responseArea.setWidth("600px");
-        responseArea.setHeight("500px");
-        responseArea.setReadOnly(true);
-
-        HorizontalLayout confirmOrSkipLayout = new HorizontalLayout(confirmButton, skipButton);
-        // Layout configuration
-        add(title, inputArea, comboBox, topKSubmitLayout, confirmArea, confirmOrSkipLayout, responseArea);
-        setSpacing(true);
-        setPadding(true);
-        setAlignItems(Alignment.CENTER);
-        setDefaultHorizontalComponentAlignment(Alignment.CENTER);
+        return comboBox;
     }
 
-    private void handleSubmit() {
+    private ComboBox buildModelNameComboBox() {
+        ComboBox<String> comboBox = new ComboBox<>("Model Name: ");
+        comboBox.setItems("gpt-5-nano", "gpt-5-mini", "gpt-4o-2024-11-20", "gpt-4-turbo", "claude-haiku-4-5", "claude-sonnet-4-5");
+        comboBox.setAllowCustomValue(true);
+        comboBox.setValue("gpt-5-nano");
+        comboBox.addCustomValueSetListener(event -> {
+                String customValue = event.getDetail();
+                try {
+                    comboBox.setValue(event.getDetail());
+                } catch (Exception e) {
+                    Notification.show("Please enter a valid string");
+                    comboBox.clear();
+                }
+                comboBox.setValue(customValue);
+        });
+        return comboBox;
+    }
+
+    private void handleSubmit(ComboBox<Integer> toolLimitComboBox, ComboBox<String> modelNameComboBox) {
         String query = inputArea.getValue();
 
         if (query == null || query.trim().isEmpty()) {
@@ -108,29 +157,39 @@ public class ChatView extends VerticalLayout {
             return;
         }
 
-        QueryResponse queryResponse = queryService.processInput(query, Integer.toString(comboBox.getValue()));
+        QueryResponse queryResponse = queryService.processInput(query, Integer.toString(toolLimitComboBox.getValue()), modelNameComboBox.getValue());
         if (queryResponse.isNeedsConfirmation()) {
             VaadinSession.getCurrent().setAttribute(CONVERSATION_ID, queryResponse.getConversationId());
+            List<QueryResponse.ToolCall> toolCallList = queryResponse.getToolCallList();
+            if (toolCallList != null) {
+                StringBuffer stringBuffer = new StringBuffer();
+                AtomicReference<Integer> count = new AtomicReference<>(1);
+                toolCallList.stream().forEach(tc -> {
+                    stringBuffer.append("Tool: " + count.get() + ", " + tc.name() + ", " + tc.arguments() + "\n");
+                    count.set(count.get() + 1);
+                });
+                toolListArea.setValue(stringBuffer.toString());
+            }
             confirmArea.setValue(queryResponse.getResponse());
         } else {
             // Display the final response
-            responseArea.setValue(queryResponse.getResponse());
+            responseArea.setContent(queryResponse.getResponse());
             Notification.show("Processing complete!", 2000,
                     Notification.Position.BOTTOM_END);
         }
     }
 
-    private void handleConfirmOrSkip(boolean approved) {
+    private void handleConfirmOrSkip(boolean approved, ComboBox<String> modelNameComboBox) {
         String query = inputArea.getValue();
         // Process the confirmation
         String retrievedConversationId = (String)VaadinSession.getCurrent().getAttribute(CONVERSATION_ID);
-        QueryResponse queryResponse = queryService.processConfirmOrSkip(retrievedConversationId, approved, null);
+        QueryResponse queryResponse = queryService.processConfirmOrSkip(retrievedConversationId, approved, null, modelNameComboBox.getValue());
 
         if (queryResponse.isNeedsConfirmation()) {
             confirmArea.setValue(queryResponse.getResponse());
         } else {
             // Display the final response
-            responseArea.setValue(queryResponse.getResponse());
+            responseArea.setContent(queryResponse.getResponse());
             Notification.show("Processing complete!", 2000,
                     Notification.Position.BOTTOM_END);
         }

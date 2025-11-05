@@ -22,4 +22,10 @@ public class QueryRequest {
      * more tokens being consumed.
      */
     private String userSuppliedTopK;
+
+    /**
+     * Model to use.
+     */
+    private String modelName;
+
 }

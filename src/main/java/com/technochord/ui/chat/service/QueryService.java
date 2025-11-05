@@ -15,8 +15,8 @@ public class QueryService {
         this.restClient = restClient;
     }
 
-    public QueryResponse processInput(final String query, String topK) {
-        QueryRequest queryRequest = new QueryRequest(query, topK);
+    public QueryResponse processInput(final String query, String topK, String modelName) {
+        QueryRequest queryRequest = new QueryRequest(query, topK, modelName);
         log.debug("Going to query with " + queryRequest);
         QueryResponse queryResponse =  restClient.post()
                 .uri("/planner/api/ai/chat")
@@ -27,8 +27,8 @@ public class QueryService {
         return queryResponse;
     }
 
-    public QueryResponse processConfirmOrSkip(String conversationId, boolean approved, String feedback) {
-        ConfirmationOrSkipRequest confirmationOrSkipRequest = new ConfirmationOrSkipRequest(conversationId, approved, feedback);
+    public QueryResponse processConfirmOrSkip(String conversationId, boolean approved, String feedback, String modelName) {
+        ConfirmationOrSkipRequest confirmationOrSkipRequest = new ConfirmationOrSkipRequest(conversationId, approved, feedback, modelName);
         log.debug("Going to confirm with " + confirmationOrSkipRequest);
         QueryResponse queryResponse =  restClient.post()
                 .uri("/planner/api/ai/confirm-tool")
