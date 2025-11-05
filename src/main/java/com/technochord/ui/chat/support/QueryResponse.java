@@ -14,6 +14,7 @@ public class QueryResponse {
     boolean needsConfirmation;
     String conversationId;
     String error;
+    List<String> relevantToolList;
     List<ToolCall> toolCallList;
 
     public static record ToolCall(String id, String type, String name, String arguments) {

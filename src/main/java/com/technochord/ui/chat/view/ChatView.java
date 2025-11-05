@@ -22,6 +22,7 @@ public class ChatView extends VerticalLayout {
     private final String CONVERSATION_ID = "CONVERSATION_ID";
     private TextArea inputArea;
     private Markdown responseArea;
+    private TextArea relevantToolListArea;
     private TextArea toolListArea;
     private TextArea confirmArea;
     private Button submitButton;
@@ -74,25 +75,32 @@ public class ChatView extends VerticalLayout {
         skipButton.addClickListener(e -> handleConfirmOrSkip(false, modelNameComboBox));
 
         // ToolList text area
-        toolListArea = new TextArea("Tools that are going to be processed:");
-        toolListArea.setPlaceholder("Tools that are going to be processed will appear here...");
+        relevantToolListArea = new TextArea("Tools who's metadata is similar to the query (using similarity search against a vector database, aka RAG):");
+        //relevantToolListArea.setPlaceholder("Tools names that can potentially be used to answer the query will appear here...");
+        relevantToolListArea.setWidth("100%");
+        relevantToolListArea.setHeight("100px");
+        relevantToolListArea.setReadOnly(true);
+
+
+        // ToolList text area
+        toolListArea = new TextArea("Tools and their arguments that need to be executed (as determined by the LLM) after confirmation:");
+        //toolListArea.setValue("Tools and their arguments that are going to be processed (only after confirmation) will appear here...");
         toolListArea.setWidth("100%");
         toolListArea.setHeight("200px");
         toolListArea.setReadOnly(true);
 
         // Confirmation text area
-        confirmArea = new TextArea("Tool Confirmation");
-        confirmArea.setPlaceholder("Tool confirmations will appear here...");
+        confirmArea = new TextArea("Please confirm tool usage:");
+        //confirmArea.setValue("Tool confirmations will appear here...");
         confirmArea.setWidth("100%");
         confirmArea.setHeight("200px");
         confirmArea.setReadOnly(true);
         HorizontalLayout confirmOrSkipLayout = new HorizontalLayout(confirmButton, skipButton);
-        confirmationLayout.add(toolListArea, confirmArea, confirmOrSkipLayout);
+        confirmationLayout.add(relevantToolListArea, toolListArea, confirmArea, confirmOrSkipLayout);
         confirmationLayout.setWidth("80%");
 
         // Response text area
-        responseArea = new Markdown("Response");
-        //responseArea.setPlaceholder("Response will appear here...");
+        responseArea = new Markdown("Planner response will appear here...");
         responseArea.setHeight("100%");
         responseArea.getStyle()
                 .set("border", "2px solid #2196F3")
@@ -111,7 +119,7 @@ public class ChatView extends VerticalLayout {
         ComboBox<Integer> comboBox = new ComboBox<>("Tool Limit: ");
         comboBox.setItems(1, 2, 3, 4, 5, 6, 7, 8, 9);
         comboBox.setAllowCustomValue(true);
-        comboBox.setValue(100);
+        comboBox.setValue(4);
         comboBox.addCustomValueSetListener(event -> {
             try {
                 Integer customValue = Integer.parseInt(event.getDetail());
@@ -159,13 +167,23 @@ public class ChatView extends VerticalLayout {
 
         QueryResponse queryResponse = queryService.processInput(query, Integer.toString(toolLimitComboBox.getValue()), modelNameComboBox.getValue());
         if (queryResponse.isNeedsConfirmation()) {
+            List<String> relevantToolList = queryResponse.getRelevantToolList();
+            if (relevantToolList != null) {
+                StringBuffer stringBuffer = new StringBuffer();
+                AtomicReference<Integer> count = new AtomicReference<>(1);
+                relevantToolList.stream().forEach(s -> {
+                    stringBuffer.append("Tool " + count.get() + ": " + s + "\n");
+                    count.set(count.get() + 1);
+                });
+                relevantToolListArea.setValue(stringBuffer.toString());
+            }
             VaadinSession.getCurrent().setAttribute(CONVERSATION_ID, queryResponse.getConversationId());
             List<QueryResponse.ToolCall> toolCallList = queryResponse.getToolCallList();
             if (toolCallList != null) {
                 StringBuffer stringBuffer = new StringBuffer();
                 AtomicReference<Integer> count = new AtomicReference<>(1);
                 toolCallList.stream().forEach(tc -> {
-                    stringBuffer.append("Tool: " + count.get() + ", " + tc.name() + ", " + tc.arguments() + "\n");
+                    stringBuffer.append("Tool " + count.get() + ": " + tc.name() + ", " + tc.arguments() + ", Id: " + tc.id() + "\n");
                     count.set(count.get() + 1);
                 });
                 toolListArea.setValue(stringBuffer.toString());
