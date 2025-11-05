@@ -13,6 +13,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -159,6 +160,13 @@ public class ChatView extends VerticalLayout {
     private void handleSubmit(ComboBox<Integer> toolLimitComboBox, ComboBox<String> modelNameComboBox) {
         String query = inputArea.getValue();
 
+        //TODO: This won't work because Vaadin renders after server call returns.
+        // Implement later using @Push and UI.access
+        relevantToolListArea.clear();
+        toolListArea.clear();
+        confirmArea.clear();
+        responseArea.setContent(".");
+
         if (query == null || query.trim().isEmpty()) {
             Notification.show("Please enter some text before submitting", 3000,
                     Notification.Position.MIDDLE);
@@ -183,7 +191,7 @@ public class ChatView extends VerticalLayout {
                 StringBuffer stringBuffer = new StringBuffer();
                 AtomicReference<Integer> count = new AtomicReference<>(1);
                 toolCallList.stream().forEach(tc -> {
-                    stringBuffer.append("Tool " + count.get() + ": " + tc.name() + ", " + tc.arguments() + ", Id: " + tc.id() + "\n");
+                    stringBuffer.append("Invocation " + count.get() + ": " + tc.name() + ", " + tc.arguments() + ", Id: " + tc.id() + "\n");
                     count.set(count.get() + 1);
                 });
                 toolListArea.setValue(stringBuffer.toString());
