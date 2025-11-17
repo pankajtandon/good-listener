@@ -191,7 +191,7 @@ public class ChatView extends VerticalLayout {
                 StringBuffer stringBuffer = new StringBuffer();
                 AtomicReference<Integer> count = new AtomicReference<>(1);
                 toolCallList.stream().forEach(tc -> {
-                    stringBuffer.append("Invocation " + count.get() + ": " + tc.name() + ", " + tc.arguments() + ", Id: " + tc.id() + "\n");
+                    stringBuffer.append("Invocation " + count.get() + ": " + tc.name() + ", " + tc.arguments() + "\n");
                     count.set(count.get() + 1);
                 });
                 toolListArea.setValue(stringBuffer.toString());
