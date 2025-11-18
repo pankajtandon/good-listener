@@ -29,6 +29,7 @@ public class ChatView extends VerticalLayout {
     private Button submitButton;
     private Button confirmButton;
     private Button skipButton;
+    private Button clearButton;
     private VerticalLayout inputLayout;
     private VerticalLayout confirmationLayout;
     private QueryService queryService;
@@ -37,6 +38,7 @@ public class ChatView extends VerticalLayout {
         this.queryService = queryService;
         ComboBox<Integer> toolLimitComboBox = buildToolLimitComboBox();
         ComboBox<String> modelNameComboBox = buildModelNameComboBox();
+        ComboBox<String> temperatureComboBox = buildTemperatureComboBox();
 
         // Page title
         H1 title = new H1("Good Listener");
@@ -56,8 +58,8 @@ public class ChatView extends VerticalLayout {
         // Submit button
         submitButton = new Button("Submit");
         submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        submitButton.addClickListener(e -> handleSubmit(toolLimitComboBox, modelNameComboBox));
-        HorizontalLayout topKSubmitLayout = new HorizontalLayout(toolLimitComboBox, modelNameComboBox, submitButton);
+        submitButton.addClickListener(e -> handleSubmit(toolLimitComboBox, modelNameComboBox, temperatureComboBox));
+        HorizontalLayout topKSubmitLayout = new HorizontalLayout(toolLimitComboBox, modelNameComboBox, temperatureComboBox, submitButton);
 
         inputLayout.add(inputArea, topKSubmitLayout);
         inputLayout.setWidth("80%");
@@ -74,6 +76,10 @@ public class ChatView extends VerticalLayout {
         skipButton = new Button("Skip");
         skipButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         skipButton.addClickListener(e -> handleConfirmOrSkip(false, modelNameComboBox));
+
+        clearButton = new Button("Clear Previous");
+        clearButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        clearButton.addClickListener(e -> handleClear());
 
         // ToolList text area
         relevantToolListArea = new TextArea("Tools who's metadata is similar to the query (using similarity search against a vector database, aka RAG):");
@@ -96,7 +102,7 @@ public class ChatView extends VerticalLayout {
         confirmArea.setWidth("100%");
         confirmArea.setHeight("200px");
         confirmArea.setReadOnly(true);
-        HorizontalLayout confirmOrSkipLayout = new HorizontalLayout(confirmButton, skipButton);
+        HorizontalLayout confirmOrSkipLayout = new HorizontalLayout(confirmButton, skipButton, clearButton);
         confirmationLayout.add(relevantToolListArea, toolListArea, confirmArea, confirmOrSkipLayout);
         confirmationLayout.setWidth("80%");
 
@@ -141,7 +147,9 @@ public class ChatView extends VerticalLayout {
 
     private ComboBox buildModelNameComboBox() {
         ComboBox<String> comboBox = new ComboBox<>("Model Name: ");
-        comboBox.setItems("gpt-5-nano", "gpt-5-mini", "gpt-4o-2024-11-20", "gpt-4-turbo", "claude-haiku-4-5", "claude-sonnet-4-5");
+        comboBox.setItems("gpt-5-nano", "gpt-5-mini", "gpt-4o-2024-11-20",
+                "gpt-4-turbo", "claude-haiku-4-5", "claude-sonnet-4-5",
+                "deepseek-chat");
         comboBox.setAllowCustomValue(true);
         comboBox.setValue("gpt-5-nano");
         comboBox.addCustomValueSetListener(event -> {
@@ -157,23 +165,33 @@ public class ChatView extends VerticalLayout {
         return comboBox;
     }
 
-    private void handleSubmit(ComboBox<Integer> toolLimitComboBox, ComboBox<String> modelNameComboBox) {
+    private ComboBox buildTemperatureComboBox() {
+        ComboBox<String> comboBox = new ComboBox<>("Temperature: ");
+        comboBox.setItems("0.1", "0.2", "0.3", "0.4", "0.5", "0.7", "0.9", "1.0");
+        comboBox.setAllowCustomValue(true);
+        comboBox.setValue("0.4");
+        comboBox.addCustomValueSetListener(event -> {
+            String customValue = event.getDetail();
+            try {
+                comboBox.setValue(event.getDetail());
+            } catch (Exception e) {
+                Notification.show("Please enter a valid double value");
+                comboBox.clear();
+            }
+            comboBox.setValue(customValue);
+        });
+        return comboBox;
+    }
+
+    private void handleSubmit(ComboBox<Integer> toolLimitComboBox, ComboBox<String> modelNameComboBox, ComboBox<String> temperatureComboBox) {
         String query = inputArea.getValue();
-
-        //TODO: This won't work because Vaadin renders after server call returns.
-        // Implement later using @Push and UI.access
-        relevantToolListArea.clear();
-        toolListArea.clear();
-        confirmArea.clear();
-        responseArea.setContent(".");
-
         if (query == null || query.trim().isEmpty()) {
             Notification.show("Please enter some text before submitting", 3000,
                     Notification.Position.MIDDLE);
             return;
         }
 
-        QueryResponse queryResponse = queryService.processInput(query, Integer.toString(toolLimitComboBox.getValue()), modelNameComboBox.getValue());
+        QueryResponse queryResponse = queryService.processInput(query, Integer.toString(toolLimitComboBox.getValue()), modelNameComboBox.getValue(), temperatureComboBox.getValue());
         if (queryResponse.isNeedsConfirmation()) {
             List<String> relevantToolList = queryResponse.getRelevantToolList();
             if (relevantToolList != null) {
@@ -219,5 +237,12 @@ public class ChatView extends VerticalLayout {
             Notification.show("Processing complete!", 2000,
                     Notification.Position.BOTTOM_END);
         }
+    }
+
+    private void handleClear() {
+        relevantToolListArea.clear();
+        toolListArea.clear();
+        confirmArea.clear();
+        responseArea.setContent("Planner response will appear here...");
     }
 }

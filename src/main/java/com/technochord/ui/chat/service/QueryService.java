@@ -15,8 +15,8 @@ public class QueryService {
         this.restClient = restClient;
     }
 
-    public QueryResponse processInput(final String query, String topK, String modelName) {
-        QueryRequest queryRequest = new QueryRequest(query, topK, modelName);
+    public QueryResponse processInput(final String query, String topK, String modelName, String temperature) {
+        QueryRequest queryRequest = new QueryRequest(query, topK, modelName, temperature);
         log.debug("Going to query with " + queryRequest);
         QueryResponse queryResponse =  restClient.post()
                 .uri("/planner/api/ai/chat")

@@ -28,4 +28,9 @@ public class QueryRequest {
      */
     private String modelName;
 
+    /**
+     * Temperature for model.
+     */
+    private String temperature;
+
 }
